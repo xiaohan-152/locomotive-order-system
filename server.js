@@ -232,6 +232,9 @@ async function sendOrderEmail(orderData, excelBuffer) {
     host: 'smtp.163.com',
     port: 465,
     secure: true,
+    connectionTimeout: 8000,  // 连接超时 8秒
+    greetingTimeout: 8000,    // 问候超时 8秒
+    socketTimeout: 15000,     // 收发超时 15秒
     auth: {
       user: process.env.QQ_EMAIL,
       pass: process.env.QQ_AUTH_CODE,
@@ -480,7 +483,11 @@ app.post('/api/orders', async (req, res) => {
     if (process.env.RECIPIENT_EMAIL && process.env.RECIPIENT_EMAIL.trim()) {
       try {
         console.log(`[${orderId}] 正在发送邮件到 ${process.env.RECIPIENT_EMAIL}...`);
-        await sendOrderEmail(orderData, excelBuffer);
+        // 邮件发送超时保护（最多等20秒）
+        await Promise.race([
+          sendOrderEmail(orderData, excelBuffer),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('邮件发送超时')), 20000))
+        ]);
         emailSent = true;
         console.log(`[${orderId}] 邮件发送成功`);
       } catch (emailErr) {
