@@ -299,10 +299,11 @@ async function sendOrderEmail(orderData, excelBuffer) {
 
   // 尝试多种SMTP配置（云平台可能屏蔽某些端口）
   const configs = [
-    { host: 'smtp.163.com', port: 587, secure: false, requireTLS: true },
-    { host: 'smtp.163.com', port: 465, secure: true },
     { host: 'smtp.qq.com', port: 587, secure: false, requireTLS: true },
     { host: 'smtp.qq.com', port: 465, secure: true },
+    { host: 'smtp.qq.com', port: 25, secure: false },
+    { host: 'smtp.163.com', port: 587, secure: false, requireTLS: true },
+    { host: 'smtp.163.com', port: 465, secure: true },
   ];
 
   const errors = [];
