@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>机车产品下单系统</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- SheetJS CDN - 用于前端预览 Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="header">
+    <div class="container header-inner">
+      <div class="logo">
+        <span class="logo-icon">📋</span>
+        <span class="logo-text">机车产品下单系统</span>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn active" data-page="browse" onclick="switchPage('browse')">
+          <span class="nav-icon">📦</span>
+          <span class="nav-label">产品选择</span>
+        </button>
+        <button class="nav-btn" data-page="cart" onclick="switchPage('cart')">
+          <span class="nav-icon">🛒</span>
+          <span class="nav-label">订单清单</span>
+          <span class="badge" id="cartBadge" style="display:none;">0</span>
+        </button>
+        <button class="nav-btn" data-page="order" onclick="switchPage('order')">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">提交订单</span>
+        </button>
+        <button class="nav-btn" data-page="history" onclick="switchPage('history'); loadOrderHistory();">
+          <span class="nav-icon">📂</span>
+          <span class="nav-label">订单历史</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="main container">
+
+    <!-- ===== 页面1: 产品浏览 ===== -->
+    <section id="page-browse" class="page-section">
+      <div class="page-header">
+        <h2>📦 产品列表</h2>
+        <p class="page-desc">选择需要订购的产品，点击"加入订单"</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="搜索标准产品、型号..." oninput="searchProducts()">
+          <span class="search-icon">🔍</span>
+        </div>
+        <div class="filter-group">
+          <select id="categoryFilter" onchange="filterProducts()">
+            <option value="">全部分类</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="productList" class="product-grid">
+        <div class="loading">加载产品中...</div>
+      </div>
+    </section>
+
+    <!-- ===== 页面2: 订单清单 ===== -->
+    <section id="page-cart" class="page-section" style="display:none;">
+      <div class="page-header">
+        <h2>🛒 订单清单</h2>
+        <p class="page-desc">选择客户，调整产品参数和数量，确认订单内容</p>
+      </div>
+
+      <!-- 客户选择栏 -->
+      <div class="customer-select-bar">
+        <label>客户名称：</label>
+        <select class="customer-select" onchange="onCustomerSelectChange(this.value)">
+          <option value="">-- 请选择客户 --</option>
+        </select>
+      </div>
+
+      <div id="cartContent">
+        <div class="cart-empty">
+          <div class="empty-icon">🛒</div>
+          <p>订单清单是空的</p>
+          <button class="btn btn-primary" onclick="switchPage('browse')">去选择产品</button>
+        </div>
+      </div>
+
+      <div id="cartActions" class="cart-actions" style="display:none;">
+        <div class="cart-summary">
+          <span>已选择 <strong id="cartTotalItems">0</strong> 项产品，共计 <strong id="cartTotalQty">0</strong> 台/套</span>
+        </div>
+        <div class="cart-buttons">
+          <button class="btn btn-outline" onclick="clearCart()">🗑️ 清空清单</button>
+          <button class="btn btn-primary" onclick="switchPage('order')">下一步：提交订单 →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 页面3: 提交订单 ===== -->
+    <section id="page-order" class="page-section" style="display:none;">
+      <div class="page-header">
+        <h2>📝 提交订单</h2>
+        <p class="page-desc">填写客户信息并确认订单，提交后将生成 Excel 并通过邮件发送</p>
+      </div>
+
+      <div class="order-form">
+        <!-- 智能解析 -->
+        <div class="form-section">
+          <h3 class="form-section-title">🤖 智能解析</h3>
+          <p style="font-size:13px;color:#888;margin-bottom:10px;">粘贴客户发来的地址信息，自动识别姓名、电话、地址并填入下方表单</p>
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <textarea id="parseInput" rows="3" placeholder="例如：张三 13800138000 辽宁省大连市中山路1号&#10;或粘贴整段地址信息..." style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;outline:none;resize:vertical;"></textarea>
+            <button class="btn btn-primary" onclick="parseCustomerInfo()" style="white-space:nowrap;padding:10px 20px;align-self:stretch;">
+              🔍 识别填入
+            </button>
+          </div>
+        </div>
+
+        <!-- 订单类型 -->
+        <div class="form-section">
+          <h3 class="form-section-title">📋 订单类型</h3>
+          <div class="order-type-group">
+            <label class="order-type-option" onclick="selectOrderType('更换货')">
+              <input type="radio" name="orderType" value="更换货" checked>
+              <span class="order-type-label">🔄 更换货</span>
+              <span class="order-type-desc">新产品换货处理</span>
+            </label>
+            <label class="order-type-option" onclick="selectOrderType('返修')">
+              <input type="radio" name="orderType" value="返修">
+              <span class="order-type-label">🔧 返修</span>
+              <span class="order-type-desc">产品返厂维修处理</span>
+            </label>
+            <label class="order-type-option" onclick="selectOrderType('正常排产')">
+              <input type="radio" name="orderType" value="正常排产">
+              <span class="order-type-label">🏭 正常排产</span>
+              <span class="order-type-desc">正常生产排程</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 客户信息 -->
+        <div class="form-section" id="customerInfoSection">
+          <h3 class="form-section-title">👤 客户信息</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>客户名称 <span class="required">*</span></label>
+              <select class="customer-select" onchange="onCustomerSelectChange(this.value)">
+                <option value="">-- 请选择客户 --</option>
+              </select>
+            </div>
+            <div class="form-group" id="contactGroup">
+              <label>联系人</label>
+              <input type="text" id="customerContact" placeholder="请输入联系人">
+            </div>
+            <div class="form-group">
+              <label>联系电话</label>
+              <input type="text" id="customerPhone" placeholder="请输入联系电话">
+            </div>
+            <div class="form-group" id="addressGroup" style="grid-column:1/-1;">
+              <label>地址</label>
+              <input type="text" id="customerAddress" placeholder="请输入收货地址">
+            </div>
+          </div>
+        </div>
+
+        <!-- 订单预览 -->
+        <div class="form-section">
+          <h3 class="form-section-title">📋 订单预览</h3>
+          <div id="orderPreview">
+            <div class="cart-empty">
+              <p>清单为空，请先选择产品</p>
+              <button class="btn btn-primary" onclick="switchPage('browse')">去选择产品</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="form-actions">
+          <button class="btn btn-outline" onclick="switchPage('cart')">← 返回清单</button>
+          <button class="btn btn-primary btn-lg" id="submitBtn" onclick="submitOrder()">
+            📤 提交更换货订单
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 成功页面 ===== -->
+    <section id="page-success" class="page-section" style="display:none;">
+      <div class="success-page">
+        <div class="success-icon">✅</div>
+        <h2>订单提交成功！</h2>
+        <div class="success-info">
+          <p>订单号：<strong id="successOrderId"></strong></p>
+          <p>已追加到订单总表：<strong id="successFileName"></strong></p>
+          <p id="successEmailLine" style="display:none;">邮件已发送至：<strong id="successRecipient"></strong></p>
+          <p style="margin-top:12px;font-size:13px;color:#888;">文件保存在项目 orders/ 文件夹中，可随时下载</p>
+        </div>
+        <div class="success-actions" style="gap:12px;">
+          <button class="btn btn-outline" onclick="downloadMasterExcel()">📥 下载总表</button>
+          <button class="btn btn-primary" onclick="resetAndGoBrowse()">🔄 继续下单</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 页面5: 订单历史 ===== -->
+    <section id="page-history" class="page-section" style="display:none;">
+      <div class="page-header">
+        <h2>📂 订单历史</h2>
+        <p class="page-desc">查看已提交的订单记录，下载 Excel 文件</p>
+      </div>
+      <div id="historyContent">
+        <div class="loading">加载订单记录中...</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 加载遮罩 -->
+  <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p id="loadingText">处理中...</p>
+    </div>
+  </div>
+
+  <!-- Toast 通知 -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- 引入 JS 模块 -->
+  <script src="js/app.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/order.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>
