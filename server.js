@@ -488,9 +488,6 @@ app.post('/api/orders', async (req, res) => {
         .catch(err => console.error(`[${orderId}] 邮件发送失败:`, err.message));
       emailSent = true;
     }
-        // 邮件失败不影响 Excel 已保存的结果
-      }
-    }
 
     res.json({
       success: true,
