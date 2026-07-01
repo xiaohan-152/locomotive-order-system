@@ -480,7 +480,7 @@ app.post('/api/orders', async (req, res) => {
 
     // ========== 3. 发送邮件（如果配置了收件人，且不在 Railway 环境） ==========
     let emailSent = false;
-    const isRailway = !!process.env.RAILWAY_SERVICE_NAME;
+    const isRailway = !!process.env.RAILWAY_PROJECT_ID || !!process.env.RAILWAY_SERVICE_ID || !!process.env.RAILWAY_ENVIRONMENT_NAME;
     if (!isRailway && process.env.RECIPIENT_EMAIL && process.env.RECIPIENT_EMAIL.trim()) {
       // 后台发邮件，不阻塞响应
       sendOrderEmail(orderData, excelBuffer)
