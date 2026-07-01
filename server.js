@@ -483,13 +483,11 @@ app.post('/api/orders', async (req, res) => {
     if (process.env.RECIPIENT_EMAIL && process.env.RECIPIENT_EMAIL.trim()) {
       try {
         console.log(`[${orderId}] 正在发送邮件到 ${process.env.RECIPIENT_EMAIL}...`);
-        // 邮件发送超时保护（最多等20秒）
-        await Promise.race([
-          sendOrderEmail(orderData, excelBuffer),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('邮件发送超时')), 20000))
-        ]);
+        // 邮件发送改为非阻塞（后台发送，不影响订单提交）
+        sendOrderEmail(orderData, excelBuffer)
+          .then(() => console.log(`[${orderId}] 邮件发送成功`))
+          .catch(err => console.error(`[${orderId}] 邮件发送失败:`, err.message));
         emailSent = true;
-        console.log(`[${orderId}] 邮件发送成功`);
       } catch (emailErr) {
         console.error(`[${orderId}] 邮件发送失败:`, emailErr.message);
         // 邮件失败不影响 Excel 已保存的结果
