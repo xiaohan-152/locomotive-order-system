@@ -478,18 +478,16 @@ app.post('/api/orders', async (req, res) => {
     // ========== 2. 保存元数据 ==========
     saveOrderMeta(orderData, orderId);
 
-    // ========== 3. 发送邮件（如果配置了收件人） ==========
+    // ========== 3. 发送邮件（如果配置了收件人，且不在 Railway 环境） ==========
     let emailSent = false;
-    if (process.env.RECIPIENT_EMAIL && process.env.RECIPIENT_EMAIL.trim()) {
-      try {
-        console.log(`[${orderId}] 正在发送邮件到 ${process.env.RECIPIENT_EMAIL}...`);
-        // 邮件发送改为非阻塞（后台发送，不影响订单提交）
-        sendOrderEmail(orderData, excelBuffer)
-          .then(() => console.log(`[${orderId}] 邮件发送成功`))
-          .catch(err => console.error(`[${orderId}] 邮件发送失败:`, err.message));
-        emailSent = true;
-      } catch (emailErr) {
-        console.error(`[${orderId}] 邮件发送失败:`, emailErr.message);
+    const isRailway = !!process.env.RAILWAY_SERVICE_NAME;
+    if (!isRailway && process.env.RECIPIENT_EMAIL && process.env.RECIPIENT_EMAIL.trim()) {
+      // 后台发邮件，不阻塞响应
+      sendOrderEmail(orderData, excelBuffer)
+        .then(() => console.log(`[${orderId}] 邮件发送成功`))
+        .catch(err => console.error(`[${orderId}] 邮件发送失败:`, err.message));
+      emailSent = true;
+    }
         // 邮件失败不影响 Excel 已保存的结果
       }
     }
