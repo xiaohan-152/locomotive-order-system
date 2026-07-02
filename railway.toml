@@ -1,0 +1,19 @@
+[project]
+name = "locomotive-order"
+
+[service]
+name = "web"
+source = "github"
+repo = "xiaohan-152/locomotive-order-system"
+branch = "master"
+
+[deploy]
+buildCommand = "npm install"
+startCommand = "node server.js"
+
+[env]
+PORT = "8080"
+QQ_EMAIL = "13188088791@163.com"
+QQ_AUTH_CODE = "FLRqNA85sidxppEv"
+RECIPIENT_EMAIL = "13188088791@163.com"
+SENDER_NAME = "机车产品下单系统"
