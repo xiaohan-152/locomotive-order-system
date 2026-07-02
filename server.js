@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const ExcelJS = require('exceljs');
-const sgMail = require('@sendgrid/mail');
+const { Resend } = require('resend');
 require('dotenv').config();
 
 const app = express();
@@ -327,26 +327,24 @@ async function sendOrderEmail(orderData, excelBuffer) {
       continue; // 尝试下一个配置
     }
   }
-  // SMTP全部失败，尝试 SendGrid（HTTP API，不会被云平台屏蔽）
-  if (process.env.SENDGRID_API_KEY) {
+  // SMTP全部失败，尝试 Resend（HTTP API，不会被云平台屏蔽）
+  if (process.env.RESEND_API_KEY) {
     try {
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      await sgMail.send({
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      await resend.emails.send({
+        from: `机车产品下单系统 <onboarding@resend.dev>`,
         to: process.env.RECIPIENT_EMAIL,
-        from: process.env.QQ_EMAIL,
         subject: `[${orderData.orderType || '更换货'}] ${orderData.customer.name} - ${dateStr}`,
         html: htmlBody,
         attachments: [{
           filename: `订单_${orderData.customer.name}_${dateStr.replace(/\//g, '-')}.xlsx`,
           content: excelBuffer.toString('base64'),
-          disposition: 'attachment',
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         }],
       });
-      console.log(`  邮件发送成功 (SendGrid)`);
+      console.log(`  邮件发送成功 (Resend)`);
       return;
-    } catch (sgErr) {
-      errors.push(`SendGrid - ${sgErr.message}`);
+    } catch (reErr) {
+      errors.push(`Resend - ${reErr.message}`);
     }
   }
   throw new Error('所有发送方式均失败: ' + errors.join('; '));
