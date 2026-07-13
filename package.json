@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "产品订单系统 - 生成Excel并通过QQ邮箱发送",
   "main": "server.js",
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
