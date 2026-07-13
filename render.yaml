@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: locomotive-order-system
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: QQ_EMAIL
+        value: "13188088791@163.com"
+      - key: QQ_AUTH_CODE
+        sync: false
+      - key: RECIPIENT_EMAIL
+        value: "13188088791@163.com"
+      - key: SENDER_NAME
+        value: "机车产品下单系统"
